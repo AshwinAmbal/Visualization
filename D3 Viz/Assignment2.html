@@ -1,0 +1,870 @@
+<html>
+<head>
+<title>Assignment 2</title>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<style>
+.popup {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.popup .popuptext {
+  visibility: hidden;
+  width: 160px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -80px;
+}
+
+.popup .popuptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+.popup .show {
+  visibility: visible;
+  -webkit-animation: fadeIn 1s;
+}
+
+@-webkit-keyframes fadeIn {
+  from {opacity: 0;} 
+  to {opacity: 1;}
+}
+
+@keyframes fadeIn {
+  from {opacity: 0;}
+  to {opacity:1 ;}
+}
+
+
+#zoom-info {
+  display: inline-block;
+  font-weight: bold;
+  text-align:center;
+  font-size: 12px;
+  border: 1.2px solid silver;
+  width: 75px;
+  height: 25px;
+  background: #e5f5f9;
+}
+
+.zoom-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  border: none;
+  background: silver;
+  font-size: 16px;
+  color: white;
+  cursor: pointer;
+  left:50px; 
+  position: absolute; 
+  top: 114px;
+}
+
+.rectangle {
+  fill: orange;
+}
+.rectangle:hover {
+  fill: #5ab4ac
+}
+.axis {
+  font: 10px sans-serif;
+  fill: black;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+}
+
+.dot {
+        fill: #e6550d;
+        stroke: #e6550d;
+    }
+
+.dot:hover {
+  fill: #5ab4ac;
+  stroke: #5ab4ac;
+}
+
+.line {
+        fill: none;
+        stroke: #e6550d;
+        stroke-width: 3;
+    }
+
+div#drop{
+  width: 200px;
+  right: 250px;
+  top: 100px;
+  position: absolute;
+}
+
+.datamaps-legend dt{
+  clear:both;
+}
+
+.datamaps-legend {
+    top: 5px;
+    width: 176px;
+    height: 25px;
+    position: absolute;
+    border: 1.2px solid silver;
+    display:inline;
+    text-align: right;
+    padding-top: 2px;
+    padding-left: 3px;
+    font-size:12px;
+    vertical-align: middle;
+    margin-left: 413px;
+    background: #e5f5f9;
+ }
+
+.background { background-color: #e5f5f9; padding: 0; color: black; }
+</style>
+</head>
+
+<body style="background:#e5f5f9">
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://d3js.org/topojson.v1.min.js"></script>
+<script src="https://datamaps.github.io/scripts/datamaps.world.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+
+<div class="background" style="position:relative;width: 1500px; height: 1500px;">
+<h4 style="padding-left:250px; position: absolute; top: 25px; font-weight:bold;"> Performance of Different Countries in the Australian Open from 2004-2014</h4>
+<p style="padding-left:95px; position: absolute; top: 80px; font-weight:bold;"> Participating Countries in the Australian Open from 2004-2014</p>
+<div id="choropleth" style="border: 2px solid silver; border-radius: 10px; margin-left: 40px; margin-top: 10px;
+  overflow: hidden; position: absolute; top: 100px; width: 600px; height: 500px;"></div>
+
+<div id="graphgoeshere" style="position: absolute; top: 125px; left: 600px; width: 240px; height: 150px;"></div>
+<div id="drop" style="position: absolute; top: 75px; right: 160px; width: 240px; height: 150px;"></div>
+
+<div id="zoom-info" style="left:87px; position: absolute; top: 116px;"></div>
+<button class="zoom-button" data-zoom="reset">0</button>
+<button class="zoom-button" data-zoom="in" style="top:149px">+</button>
+<button class="zoom-button" data-zoom="out" style="top:184px">-</button>
+
+<div class="popup" style="left:515px; position: absolute; top: 250px;">
+  <span class="popuptext" id="myPopup">Click on Country to Toggle Chart!</span>
+</div>
+
+<script>
+function pop(){
+  var popup = document.getElementById("myPopup");
+  popup.classList.toggle("show");
+  var delayInMilliseconds = 3000; //1 second
+
+setTimeout(function() {
+  $('#myPopup').fadeOut();
+  }, delayInMilliseconds);
+}
+
+
+//pop();
+
+function Zoom(args) {
+  $.extend(this, {
+    $buttons:   $(".zoom-button"),
+    $info:      $("#zoom-info"),
+    scale:      { max: 50, currentShift: 0 },
+    $container: args.$container,
+    datamap:    args.datamap
+  });
+
+  this.init();
+}
+
+Zoom.prototype.init = function() {
+  var paths = this.datamap.svg.selectAll("path"),
+      subunits = this.datamap.svg.selectAll(".datamaps-subunit");
+
+  // preserve stroke thickness
+  paths.style("vector-effect", "non-scaling-stroke");
+
+  // disable click on drag end
+  subunits.call(
+    d3.behavior.drag().on("dragend", function() {
+      d3.event.sourceEvent.stopPropagation();
+    })
+  );
+
+  this.scale.set = this._getScalesArray();
+  this.d3Zoom = d3.behavior.zoom().scaleExtent([ 1, this.scale.max ]);
+
+  this._displayPercentage(1);
+  this.listen();
+};
+
+Zoom.prototype.listen = function() {
+  this.$buttons.off("click").on("click", this._handleClick.bind(this));
+
+  this.datamap.svg
+    .call(this.d3Zoom.on("zoom", this._handleScroll.bind(this)))
+    .on("dblclick.zoom", null); // disable zoom on double-click
+};
+
+Zoom.prototype.reset = function() {
+  this._shift("reset");
+};
+
+Zoom.prototype._handleScroll = function() {
+  var translate = d3.event.translate,
+      scale = d3.event.scale,
+      limited = this._bound(translate, scale);
+
+  this.scrolled = true;
+
+  this._update(limited.translate, limited.scale);
+};
+
+Zoom.prototype._handleClick = function(event) {
+  var direction = $(event.target).data("zoom");
+
+  this._shift(direction);
+};
+
+Zoom.prototype._shift = function(direction) {
+  var center = [ this.$container.width() / 2, this.$container.height() / 2 ],
+      translate = this.d3Zoom.translate(), translate0 = [], l = [],
+      view = {
+        x: translate[0],
+        y: translate[1],
+        k: this.d3Zoom.scale()
+      }, bounded;
+
+  translate0 = [
+    (center[0] - view.x) / view.k,
+    (center[1] - view.y) / view.k
+  ];
+
+	if (direction == "reset") {
+  	view.k = 1;
+    this.scrolled = true;
+  } else {
+  	view.k = this._getNextScale(direction);
+  }
+
+l = [ translate0[0] * view.k + view.x, translate0[1] * view.k + view.y ];
+
+  view.x += center[0] - l[0];
+  view.y += center[1] - l[1];
+
+  bounded = this._bound([ view.x, view.y ], view.k);
+
+  this._animate(bounded.translate, bounded.scale);
+};
+
+Zoom.prototype._bound = function(translate, scale) {
+  var width = this.$container.width(),
+      height = this.$container.height();
+
+  translate[0] = Math.min(
+    (width / height)  * (scale - 1),
+    Math.max( width * (1 - scale), translate[0] )
+  );
+
+  translate[1] = Math.min(0, Math.max(height * (1 - scale), translate[1]));
+
+  return { translate: translate, scale: scale };
+};
+
+Zoom.prototype._update = function(translate, scale) {
+  this.d3Zoom
+    .translate(translate)
+    .scale(scale);
+
+  this.datamap.svg.selectAll("g")
+    .attr("transform", "translate(" + translate + ")scale(" + scale + ")");
+
+  this._displayPercentage(scale);
+};
+
+Zoom.prototype._animate = function(translate, scale) {
+  var _this = this,
+      d3Zoom = this.d3Zoom;
+
+  d3.transition().duration(350).tween("zoom", function() {
+    var iTranslate = d3.interpolate(d3Zoom.translate(), translate),
+        iScale = d3.interpolate(d3Zoom.scale(), scale);
+
+		return function(t) {
+      _this._update(iTranslate(t), iScale(t));
+    };
+  });
+};
+
+Zoom.prototype._displayPercentage = function(scale) {
+  var value;
+
+  value = Math.round(Math.log(scale) / Math.log(this.scale.max) * 100);
+  this.$info.text("Zoom: " + value + "%");
+};
+
+Zoom.prototype._getScalesArray = function() {
+  var array = [],
+      scaleMaxLog = Math.log(this.scale.max);
+
+  for (var i = 0; i <= 10; i++) {
+    array.push(Math.pow(Math.E, 0.1 * i * scaleMaxLog));
+  }
+
+  return array;
+};
+
+Zoom.prototype._getNextScale = function(direction) {
+  var scaleSet = this.scale.set,
+      currentScale = this.d3Zoom.scale(),
+      lastShift = scaleSet.length - 1,
+      shift, temp = [];
+
+  if (this.scrolled) {
+
+    for (shift = 0; shift <= lastShift; shift++) {
+      temp.push(Math.abs(scaleSet[shift] - currentScale));
+    }
+
+    shift = temp.indexOf(Math.min.apply(null, temp));
+
+    if (currentScale >= scaleSet[shift] && shift < lastShift) {
+      shift++;
+    }
+
+    if (direction == "out" && shift > 0) {
+      shift--;
+    }
+
+    this.scrolled = false;
+
+  } else {
+
+    shift = this.scale.currentShift;
+
+    if (direction == "out") {
+      shift > 0 && shift--;
+    } else {
+      shift < lastShift && shift++;
+    }
+  }
+
+  this.scale.currentShift = shift;
+
+  return scaleSet[shift];
+};
+
+function Datamap() {
+	this.$container = $("#choropleth");
+	this.instance = new Datamaps({
+    scope: 'world',
+    element: this.$container.get(0),
+    projection: 'mercator',
+    fills: {
+    defaultFill: "#ABDDA4",
+    Participating_Countries: "#fa0fa0"
+  	},
+    done: this._handleMapReady.bind(this),
+    data: {
+  	ARG: { fillKey: "Participating_Countries" },
+  	ARM: { fillKey: "Participating_Countries" },
+  	AUS: { fillKey: "Participating_Countries" },
+  	AUT: { fillKey: "Participating_Countries" },
+  	BEL: { fillKey: "Participating_Countries" },
+  	BIH: { fillKey: "Participating_Countries" },
+  	BLR: { fillKey: "Participating_Countries" },
+  	BRA: { fillKey: "Participating_Countries" },
+  	BGR: { fillKey: "Participating_Countries" },
+  	CAN: { fillKey: "Participating_Countries" },
+  	CHE: { fillKey: "Participating_Countries" },
+  	CHL: { fillKey: "Participating_Countries" },
+  	CYP: { fillKey: "Participating_Countries" },
+  	CZE: { fillKey: "Participating_Countries" },
+  	DEU: { fillKey: "Participating_Countries" },
+  	ECU: { fillKey: "Participating_Countries" },
+  	ESP: { fillKey: "Participating_Countries" },
+  	FIN: { fillKey: "Participating_Countries" },
+  	FRA: { fillKey: "Participating_Countries" },
+  	GBR: { fillKey: "Participating_Countries" },
+  	HRV: { fillKey: "Participating_Countries" },
+  	ITA: { fillKey: "Participating_Countries" },
+  	JPN: { fillKey: "Participating_Countries" },
+  	KAZ: { fillKey: "Participating_Countries" },
+  	LTU: { fillKey: "Participating_Countries" },
+  	NLD: { fillKey: "Participating_Countries" },
+  	POL: { fillKey: "Participating_Countries" },
+  	ROU: { fillKey: "Participating_Countries" },
+  	ZAF: { fillKey: "Participating_Countries" },
+  	RUS: { fillKey: "Participating_Countries" },
+  	SVN: { fillKey: "Participating_Countries" },
+  	SRB: { fillKey: "Participating_Countries" },
+  	SVK: { fillKey: "Participating_Countries" },
+  	SWE: { fillKey: "Participating_Countries" },
+  	THA: { fillKey: "Participating_Countries" },
+  	TWN: { fillKey: "Participating_Countries" },
+  	UKR: { fillKey: "Participating_Countries" },
+  	USA: { fillKey: "Participating_Countries" },
+  },
+  geographyConfig: {
+            highlightFillColor: "#e6550d",
+            borderWidth: 0.8,
+            borderOpacity: 0.8,
+            borderColor: 'black',
+            highlightBorderColor: '#fffff',
+            popupTemplate: function (geo, data) {
+            if ( !data ) return ;
+            return ['<div class="hoverinfo"><strong>',
+                geo.properties.name,
+                '</strong></div>'].join('');
+        	},		
+        },
+	});
+}
+
+Datamap.prototype._handleMapReady = function(datamap) {
+	this.zoom = new Zoom({
+  	$container: this.$container,
+  	datamap: datamap
+  });
+	datamap.svg.selectAll('.datamaps-subunit').on('click', function(geography) {
+	      updateGraph(geography.id, geography.properties.name);
+    	});
+	datamap.legend();
+  pop();
+}
+
+basic_chloropeth = new Datamap();
+</script>
+
+
+<script>
+function updateGraph(country_to_display, country_name){
+		var country = {};
+		d3.selectAll("#Graph").remove();
+		d3.selectAll("#dropdown").remove();
+		if(country_to_display == "CHE")
+			country_to_display = "SUI";
+		if(country_to_display == "NLD")
+			country_to_display = "NED";
+		if(country_to_display == "DEU")
+			country_to_display = "GER";
+		if(country_to_display == "SVN")
+			country_to_display = "SLO";
+		if(country_to_display == "BGR")
+			country_to_display = "BUL";
+		if(country_to_display == "CHL")
+			country_to_display = "CHI";
+		if(country_to_display == "HRV")
+			country_to_display = "CRO";
+		if(country_to_display == "ZAF")
+			country_to_display = "RSA";
+		if(country_to_display == "TWN")
+			country_to_display = "TPE";
+		d3.csv("Country_Abbr.csv", function(error, data){
+			for(dat in data){
+		      country[String(data[dat].ID)] = data[dat].Country;
+		    }
+
+		//console.log(country_to_display);
+		//console.log(country['ARG']);
+		//country_to_display = "ARG";
+		var margin = {top: 80, right: 180, bottom: 80, left: 180},
+		    width = 960 - margin.left - margin.right,
+		    height = 500 - margin.top - margin.bottom;
+
+		var svg = d3.select("#graphgoeshere").append("svg")
+			.attr("id","Graph")
+			.attr("width", width + margin.left + margin.right)
+		    .attr("height", height + margin.top + margin.bottom)
+			.append("g")
+		    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+		d3.csv("10yearAUSOpenMatchesAssign2Edited.csv", function(error, data){
+
+			// filter year
+			var data = data.filter(function(d){return d.Country == country_to_display;});
+			// Get every column value
+			if(data[0] == null){
+				alert(country_name + " did not participate in the AUS Open")
+				return;
+			}
+		d3.csv("10yearAUSOpenMatchesAssign2EditedLoser.csv", function(error, dataLoser){
+
+			// filter year
+			var dataLoser = dataLoser.filter(function(d){return d.Country == country_to_display;});
+			var elements = Object.keys(data[0])
+				.filter(function(d){
+					return ((d != "Country") & (d != "TWinner") & (d != "Year"));
+				});
+
+      console.log(elements[0]);
+			var minyear = 2018, maxyear = 2000;
+			for(dat in data){
+					//console.log(data[dat].Year);
+					maxyear = Math.max(maxyear, data[dat].Year);
+					minyear = Math.min(minyear, data[dat].Year);
+			}
+			//console.log(maxyear, minyear);
+
+			var selection = elements[0];
+
+      maxWin = d3.max(data, function(d){
+            return +d[selection];
+          })
+      maxLos = d3.max(dataLoser, function(d){
+            return +d[selection];
+          })
+
+			var y = d3.scale.linear()
+					.domain([0, Math.max(maxLos, maxWin) * 1.1])
+					.range([height, 0]);
+
+			var x = d3.scale.ordinal()
+					.domain(data.map(function(d){ return d.Year;}))
+					.rangeBands([0, width]);
+
+
+			var xAxis = d3.svg.axis()
+				.scale(x)
+			    .orient("bottom");
+
+			var yAxis = d3.svg.axis()
+				.scale(y)
+			    .orient("left");
+			
+
+			var formatNumber = d3.format('.2f');
+
+			svg.append("g")
+		    	.attr("class", "x axis")
+		    	.attr("transform", "translate(0," + height + ")")
+		    	.call(xAxis)
+		    	.selectAll("text")
+		    	.style("font-size", "10px")
+		      	.style("text-anchor", "end")
+		      	.attr("dx", "1.1em")
+		      	.attr("dy", "0.8em");
+
+
+		 	svg.append("g")
+		    	.attr("class", "y axis")
+		    	.call(yAxis);
+
+			svg.selectAll("rectangle")
+				.data(data)
+				.enter()
+				.append("rect")
+				.attr("class","rectangle")
+				.attr("width", width/data.length - 10)
+				.attr("height", function(d){
+					return height - y(+d[selection]);
+				})
+				.attr("x", function(d, i){
+					return (width / data.length) * i + 5;
+				})
+				.attr("y", function(d){
+					return y(+d[selection]);
+				})
+				.append("title")
+				.text(function(d){
+					return selection + " : " + formatNumber(d[selection]);
+				});
+
+			var line = d3.svg.line()
+				.x(function(d, i) { return (width / dataLoser.length) * i + 5 + (width/dataLoser.length - 10) / 2; })
+			    .y(function(d) { return y(+d[selection]) })
+
+			svg.append("path")
+			    .attr("class", "line") // Assign a class for styling
+			    .attr("d", line(dataLoser));
+
+			var circleSelection = svg.selectAll("circle").data(dataLoser);
+			var circleElements = circleSelection.enter().append("circle") // Uses the enter().append() method
+		      						  .attr("class", "dot") // Assign a class for styling
+								      .attr("cx", function(d, i) { return (width / data.length) * i + 5 + (width/data.length - 10) / 2; })
+								      .attr("cy", function(d) { return y(+d[selection]) })
+								      .attr("r", 5)
+								      .append("title")
+									  .text(function(d){
+											return selection + " : " + formatNumber(d[selection]);
+										});
+
+			var selector = d3.select("#drop")
+		    	.append("select")
+		    	.attr("class", "custom-select")
+		    	.style("background-color", "#e5f5f9")
+		    	.style("color", "black")
+    			.style("font-size", "15px")
+    			.style("font-weight", "bold")
+    			.style("text-anchor", "middle")
+		    	.attr("id","dropdown")
+		    	.on("change", function(d){
+		        	selection = document.getElementById("dropdown");
+		        	
+		        	onchange();
+              maxWin = d3.max(data, function(d){
+                return +d[selection.value];
+              })
+              maxLos = d3.max(dataLoser, function(d){
+                return +d[selection.value];
+              })
+
+		        	y.domain([0, Math.max(maxLos, maxWin) * 1.1]);
+
+		        	yAxis.scale(y);
+
+		        	var lineChange = d3.svg.line()
+						.x(function(d, i) { return (width / dataLoser.length) * i + 5 + (width/dataLoser.length - 10) / 2; })
+					    .y(function(d) { return y(+d[selection.value]) })
+
+		           	d3.selectAll(".line")
+		           	.transition()
+					.attr("d", lineChange(dataLoser));
+
+
+					circleSelection.transition()
+					  .attr("cy", function(d, i) { return (width / dataLoser.length) * i + 5 + (width/dataLoser.length - 10) / 2; })
+				      .attr("cy", function(d) { return y(+d[selection.value]) })
+				      .select("title")
+					  .text(function(d){
+							return selection.value + " : " + formatNumber(d[selection.value]);
+						});
+
+
+		        	d3.selectAll(".rectangle")
+		           		.transition()
+			            .attr("height", function(d){
+							return height - y(+d[selection.value]);
+						})
+						.attr("x", function(d, i){
+							return (width / data.length) * i + 5;
+						})
+						.attr("y", function(d){
+							return y(+d[selection.value]);
+						})
+		           		.ease("linear")
+		           		.select("title")
+		           		.text(function(d){
+		           			return selection.value + " : " + formatNumber(d[selection.value]);
+		           		});
+			            
+		           	d3.selectAll("g.y.axis")
+		           		.transition()
+		           		.call(yAxis);
+
+		           	d3.select("#legend1")
+		           	.attr("x", function(){
+		           		if(selection.value.length < 12)
+		           			return width - 21 - selection.value.length - (19 - selection.value.length) ;
+		           		else
+		           			return width - 21 - selection.value.length;
+		           })
+					.text(function(){
+						//console.log(selection);
+						return "Victor " + selection.value + ":"
+					});
+
+					d3.select("#legend2")
+		           	.attr("x", function(){
+		           		if(selection.value.length < 12)
+		           			return width - 21 - selection.value.length - (18 - selection.value.length) ;
+		           		else
+		           			return width - 21 - selection.value.length;
+		           })
+					.text(function(){
+						//console.log(selection);
+						return "Loser " + selection.value + ":"
+					});
+
+
+		           	d3.select("#xLabel")
+			      	.attr("transform", "rotate(-90)")
+			      	.attr("y", -45)
+			      	.attr("x",0 - (height / 2))
+			      	.attr("dy", "1em")
+			      	.style("text-anchor", "middle")
+			      	.style("fill", "black")
+			      	.style("font-weight", "bold")
+			      	.text(function(){
+			      		if(selection.value == "Net Percent" || selection.value == "Break Percent" || selection.value == "Return Percent")
+			      			return "Percent";
+			      		else
+			      			return "Value";
+			      	});
+			         });
+
+			    selector.selectAll("option")
+			      .data(elements)
+			      .enter().append("option")
+			      .attr("value", function(d){
+			        return d;
+		      })
+		      .text(function(d){
+		        return d;
+		      })
+
+		      var e = document.getElementById("dropdown");
+			  var chosenOption = e.options[e.selectedIndex].value;
+		      svg.append("text")
+		      			.attr("class", "textBox")
+				        .attr("x", (width / 2))             
+				        .attr("y", - (margin.top / 2) - 21)
+				        .attr("text-anchor", "middle")  
+				        .style("font-size", "16px") 
+				        .style("fill", "black") 
+				        .style("font-weight", "bold")
+				        .text(function(){
+                  if(chosenOption == "Matches Played")
+                    return "Number of " + chosenOption +" by " + country[country_to_display] + " in the Australian Open from " + minyear + "-" + maxyear;
+                  else                    
+                    return "Mean " + chosenOption +" of " + country[country_to_display] + " in the Australian Open from " + minyear + "-" + maxyear;
+                });
+			  
+			  svg.append("text")            
+			  .attr("transform", "translate(" + (margin.left + 115) + "," + (height + 35) + ")")
+		      .style("text-anchor", "middle")
+		      .style("fill", "black")
+		      .style("font-weight", "bold")
+		      .text("Year");
+
+		    svg.append("rect")
+		      .attr("x", width - 30)
+		      .attr("y", height - 370)
+		      .attr("id", "id_1")
+		      .attr("width", 19)
+		      .attr("height", 19)
+		      .attr("fill", "orange")
+		 
+		  	svg.append("text")
+		      .attr("id", "legend1")
+		      .attr("x", width - 21 - selection.length)
+		      .attr("y", height - 360)
+		      .style("fill", "black")
+		      .style("text-anchor", "end")
+		      .style("font-weight", "bold")
+		      .style("font-size", "13px")
+		      .attr("dy", "0.32em")
+		      .text(function(){
+		      	return "Victor " + selection + ":"
+		      });
+
+		      svg.append("rect")
+		      .attr("x", width - 30)
+		      .attr("y", height - 345)
+		      .attr("id", "id_1")
+		      .attr("width", 19)
+		      .attr("height", 19)
+		      .attr("fill", "#e6550d")
+		 
+		  	svg.append("text")
+		      .attr("id", "legend2")
+		      .attr("x", width - 21 - selection.length)
+		      .attr("y", height - 333)
+		      .style("fill", "black")
+		      .style("text-anchor", "end")
+		      .style("font-weight", "bold")
+		      .style("font-size", "13px")
+		      .attr("dy", "0.32em")
+		      .text(function(){
+		      	return "Loser " + selection + ":"
+		      });
+
+		      svg.append("text")
+		      		.attr("id", "xLabel")
+			      	.attr("transform", "rotate(-90)")
+			      	.attr("y", -45)
+			      	.attr("x",0 - (height / 2))
+			      	.attr("dy", "1em")
+			      	.style("text-anchor", "middle")
+			      	.style("fill", "black")
+			      	.style("font-weight", "bold")
+			      	.text(function(){
+			      		if(selection.value == "Net Percent" || selection.value == "Break Percent" || selection.value == "Return Percent")
+			      			return "Percent";
+			      		else
+			      			return "Value";
+			      	});
+
+		      function onchange(){
+			      var e = document.getElementById("dropdown");
+				  var chosenOption = e.options[e.selectedIndex].value;
+			      d3.select(".textBox")
+				        .text(function(){
+                  if(chosenOption == "Matches Played")
+                    return "Number of " + chosenOption +" by " + country[country_to_display] + " in the Australian Open from " + minyear + "-" + maxyear;
+                  else                    
+                    return "Mean " + chosenOption +" of " + country[country_to_display] + " in the Australian Open from " + minyear + "-" + maxyear;
+                });
+			   	}
+			});
+			})
+		});
+	}
+</script> 
+<!--
+<div style="position: absolute; top: 100px; width: 1350px; height: 500px; margin-top:750px; margin-left: 20px">
+<h4 style="padding-left:250px; position: absolute;font-weight:bold;"> Performance of Different Countries in the Australian Open from 2004-2014</h4>
+<br><br><br>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The dataset provides information about match statistics of 10 years of Australian Open Tennis Championship. During this time span, there have been <strong>38 countries</strong> which have participated in the tournament. The interactive visualization attached, provides a comparison between the winning and losing match statistics of different countries in the years they have played in the tournament. In order to compare where a country excelled or lost out, features like Aces, Break Percent, Double Fault, Error, Matches Played, Net Percent, Return Percent, Total and Winner have been considered. 
+</p>
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Each row in the dataset is grouped on country and year. While grouping the data, there were many null values found. These null values were replaced by the mean of the respective groups for the particular attribute in order not to affect the mean of the entire group for that attribute and also to not lose the data contributed by the row for other attributes which were not null. The rows found to be null even after making this modification were ignored in the calculation of the mean. Hence, countries which took part in the tournament but had null values for all rows of an attribute even after the change, were ignored. The average of each attribute was found for the group and a new dataset was created from which the chart is drawn.
+</p>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A <strong>choropleth</strong> world map is used to visually depict which countries are included in the visualization. Deep Pink is used to differentiate participating countries from the others. <strong>Mouse Scroll</strong> and <strong>Zoom Buttons</strong> are used to zoom in on different parts of the world map (especially the small European countries) which would make it easier to choose the countries without ambiguity. The reset button resets the zoom to default. <strong>Zoom percentage</strong> is included in the map to display the current level of zoom. <strong>Mouseover</strong> on participating countries <strong>highlights</strong> the particular country with orange color and black border with higher opacity to uniquely distinguish the country under consideration. A <strong>hover text</strong> is also displayed which includes the name of the country and on clicking, it will display the statistics related to that country as a <strong>line-bar graph</strong>. Clicking on other countries will prompt an <strong>alert</strong> saying that the country did not participate in the AUS open. When the choropleth is completely set up in the start, a <strong>message pops up</strong> to indicate that the user needs to click on the country to see the match performance of the country in the AUS Open.
+</p>
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A combination of <strong>line and bar chart</strong> is used to compare the statistics of the clicked country. The <strong>line</strong> represents the statistics of the <strong>matches lost</strong> by the country whereas the <strong>bar</strong> shows that of the <strong>matches won</strong> over the years. The line-bar graph is space efficient compared to a grouped bar chart and works as a good replacement for the latter to compare similar data and incorporates the best of both charts (line and bar). Moreover, there is no ambiguity about which data (Loser or Victor) represented for each category as they are two different shapes when compared to a grouped line or bar chart where colors play an important role in distinguishing the categories. The color for the line and bar in the chart (for loser and victor) were chosen as persimmon and orange colors so that the eye can easily distinguish between them, making it easy to comprehend. The <strong>size/opacity</strong> of the text, legends and numbers in the chart was set to be easily legible by most readers. <strong>Mark labels</strong> are displayed for the line and bar when hovered over the line or bar for accurately conveying the information. The <strong>highlight color</strong> on hover for both the line and bar chart was chosen as Puerto Rico blue. All the colors in the visualization were chosen such that even <strong>color blind people</strong> can easily distinguish between different elements in the chart. A <strong>dropdown menu</strong> allows the user to choose which performance metric of the match statistics to visualize. <br><strong>D3 Transition</strong> is used when changing between different attributes. Hence, the axis, line and bar graph rescales according to the data of the selected attribute resulting in an <strong>aesthetic transition</strong>. The <strong>background</strong> of the visualization is set to Light Cyan in replacement of plain white to reduce the brightness of the background and aid users to view the content without strain from glare in dim surroundings. It also has the added advantage of signifying the color of the ocean surrounding the countries. :)
+</p>
+<br>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The charts of different countries show data of where they are excelling and where they can improve. Some examples are given below:
+</p>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>In 2004</strong>, we can see that Switzerland hasn&#39;t lost a single game (Loser Matches Played: 0) but it also shows that it wasn&#39;t their best performance compared to future years but that was the year they won the AUS Open. This might be because players might have started adapting to the tactics of the Swiss players leading to the Swiss players to up their game over the years.
+</p>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Players of Chile had a record low winner points <strong>in 2007</strong> because of which they lost many games. This might be because 2007 recorded the highest temperature in the Australian open and Chile being a very cool place, the players might have found it difficult to adapt to the weather.
+</p>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>In 2008</strong>, Serbia seems to have had a record low double faults (1.25) and a record high return percent (49.25). It had an average to high performance in terms of total, net percent, break percent and an average to low error rate. All the parameters were in their favor which in turn led them to win the AUS Open that year.
+</p>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;France is one of the countries which has given a consistent performance throughout the years.This might be because of one of two reasons, 
+    <ul>
+    <li>The consistent training given by the coaches of France or </li>
+    <li>The French players adapting well to the Australian courts.</li>
+  </ul>
+  Eventhough these players have learnt to adapt quickly, other players seem to easily adapt to the French playing style which is why they haven&#39;t won a single AUS open.
+</p>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Being their home ground, Australia doesn&#39;t seem to have used the home advantage very well. They have been very inconsistent in their performance having many ups and downs throughout the years.
+</p>
+<p>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;In conclusion, this visualization would be a useful asset for analyzing performance statistics of different countries and incorporating their best features in a players game. The features selected for the comparison were the ones that would most likely describe the pros and cons between a victor and a loser in a country. <br><strong>Furthermore, features like the number of aces, faults, etc., which scored a decisive win/loss of a set/match would significantly help improve the analysis of the matches.</strong>
+</p>
+
+</div>
+-->
+</body>
+</html>

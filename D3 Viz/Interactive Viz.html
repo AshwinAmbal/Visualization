@@ -498,7 +498,7 @@ function updateGraph(country_to_display, country_name){
 			.append("g")
 		    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-		d3.csv("10yearAUSOpenMatchesAssign2Edited.csv", function(error, data){
+		d3.csv("10yearAUSOpenMatchesAssign2EditedWinner.csv", function(error, data){
 
 			// filter year
 			var data = data.filter(function(d){return d.Country == country_to_display;});
